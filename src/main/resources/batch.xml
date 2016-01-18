@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:batch="http://www.springframework.org/schema/batch" xmlns:util="http://www.springframework.org/schema/util" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.springframework.org/schema/beans"
+  xsi:schemaLocation="http://www.springframework.org/schema/batch
+		http://www.springframework.org/schema/batch/spring-batch-2.2.xsd
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd
+		http://www.springframework.org/schema/util
+		http://www.springframework.org/schema/util/spring-util-3.2.xsd
+		">
+
+  <!-- spring settings -->
+  <import resource="applicationContext.xml"/>
+
+  <!-- database settings -->
+  <import resource="database.xml"/>
+
+  <!-- partitioner job -->
+  <job id="partitionJob" xmlns="http://www.springframework.org/schema/batch">
+
+    <!-- master step, number of threads = grid-size -->
+    <step id="masterStep">
+      <partition partitioner="rangePartitioner" step="slave">
+        <handler grid-size="48" task-executor="concurrentTaskExecutor"/>
+      </partition>
+    </step>
+
+  </job>
+
+  <!-- Jobs to run -->
+  <step id="slave" xmlns="http://www.springframework.org/schema/batch">
+    <tasklet>
+      <chunk commit-interval="10000" processor="itemProcessor" reader="yjbzHbaseItemReader" writer="flatFileItemWriter"/>
+    </tasklet>
+  </step>
+
+  <bean class="com.co2y.project.oracle_exportdata_springbatch.RangePartitioner" id="rangePartitioner"/>
+  <!-- <bean id="taskExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor"
+		/> -->
+  <bean class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor" id="concurrentTaskExecutor">
+    <property name="corePoolSize" value="10"/>
+    <property name="maxPoolSize" value="20"/>
+    <property name="queueCapacity" value="1000"/>
+  </bean>
+
+  <bean class="com.co2y.project.oracle_exportdata_springbatch.YJBZProcessor" id="itemProcessor" scope="step">
+    <property name="threadName" value="#{stepExecutionContext[name]}"/>
+  </bean>
+
+  <!-- <bean id="yjbzItemReader" class="com.co2y.project.mongodb_exportdata_springbatch.YJBZItemReader" scope="step">
+		<property name = "mongo" ref="mongoClient" />
+
+		<property name = "databaseName" value="fitetl_etl" />
+		<property name = "collectionName" value="YJBZ_00701_B0349H245010001" />
+		<property name = "converter">
+			<bean class="com.co2y.project.mongodb_exportdata_springbatch.YJBZConverter">
+			</bean>
+		</property>
+		<property name="fromId" value="#{stepExecutionContext[fromId]}" />
+		<property name="toId" value="#{stepExecutionContext[toId]}" />
+	</bean>  -->
+
+  <bean class="com.co2y.project.hbase_exportdata_springbatch.YJBZHbaseItemReader" id="yjbzHbaseItemReader" scope="step">
+    <property name="rootdir" value="hdfs://master.kiwenlau.com:9000/hbase"/>
+
+    <property name="master" value="hdfs://master.kiwenlau.com:60000"/>
+    <property name="quorum" value="master.kiwenlau.com,slave1.kiwenlau.com,slave2.kiwenlau.com"/>
+    <property name="converter">
+      <bean class="com.co2y.project.hbase_exportdata_springbatch.YJBZHbaseConverter"></bean>
+    </property>
+    <property name="startnum" value="#{stepExecutionContext[fromId]}"/>
+    <property name="endnum" value="#{stepExecutionContext[toId]}"/>
+  </bean>
+
+  <!-- <bean id="pagingItemReader"
+		class="org.springframework.batch.item.database.JdbcPagingItemReader"
+		scope="step">
+		<property name="dataSource" ref="dataSource" />
+		<property name="queryProvider">
+			<bean
+				class="org.springframework.batch.item.database.support.SqlPagingQueryProviderFactoryBean">
+				<property name="dataSource" ref="dataSource" />
+				<property name="selectClause"
+					value="select NUM, HXJYLSH, ZJYLSH, BCXH, JYRQ, YXJGDM, NBJGH, JRXKZH, MXKMBH, JYSJ, JZRQ, JZSJ, JYJGMC, JYZH, JYHM, JYXTMC, DFXH, DFJGMC, DFZH, DFHM, JYJE, ZHYE, JDBZ, XZBZ, BZ, YWLX, JYLX, JYQD, JYJZMC, JYJZH, CZGYH, GYLSH, FHGYH, ZY, ZPZZL, ZPZH, FPZZL, FPZH, CBMBZ, SJC, ZHBZ, KXHBZ, CJRQ" />
+				<property name="fromClause" value="from YJBZ_00701_B0349H245010001" />
+				<property name="whereClause"
+					value="where NUM &gt;= :fromId and NUM &lt;= :toId" />
+				<property name="sortKey" value="NUM" />
+			</bean>
+		</property>
+		<property name="parameterValues">
+			<map>
+				<entry key="fromId" value="#{stepExecutionContext[fromId]}" />
+				<entry key="toId" value="#{stepExecutionContext[toId]}" />
+			</map>
+		</property>
+		<property name="pageSize" value="2000" />
+		<property name="rowMapper">
+			<bean class="com.co2y.project.oracle_exportdata_springbatch.YJBZRowMapper" />
+		</property>
+	</bean> -->
+
+  <!-- csv file writer -->
+  <bean class="org.springframework.batch.item.file.FlatFileItemWriter" id="flatFileItemWriter" scope="step">
+    <property name="resource" value="file:/home/outputs/yjbz.processed#{stepExecutionContext[fromId]}-#{stepExecutionContext[toId]}.csv"/>
+    <property name="appendAllowed" value="false"/>
+    <property name="lineAggregator">
+      <bean class="org.springframework.batch.item.file.transform.DelimitedLineAggregator">
+        <property name="delimiter" value=","/>
+        <property name="fieldExtractor">
+          <bean class="org.springframework.batch.item.file.transform.BeanWrapperFieldExtractor">
+            <property name="names"
+              value="HXJYLSH, ZJYLSH, BCXH, JYRQ, YXJGDM, NBJGH, JRXKZH, MXKMBH, JYSJ, JZRQ, JZSJ, JYJGMC, JYZH, JYHM, JYXTMC, DFXH, DFJGMC, DFZH, DFHM, JYJE, ZHYE, JDBZ, XZBZ, BZ, YWLX, JYLX, JYQD, JYJZMC, JYJZH, CZGYH, GYLSH, FHGYH, ZY, ZPZZL, ZPZH, FPZZL, FPZH, CBMBZ, SJC, ZHBZ, KXHBZ, CJRQ"/>
+          </bean>
+        </property>
+      </bean>
+    </property>
+  </bean>
+
+</beans>
