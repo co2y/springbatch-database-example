@@ -8,15 +8,15 @@
   <!-- <bean class="org.springframework.jdbc.datasource.DriverManagerDataSource" id="dataSource">
     <property name="driverClassName" value="oracle.jdbc.OracleDriver"/>
     <property name="url" value="jdbc:oracle:thin:@192.168.0.219:32943:xe"/>
-    <property name="username" value="east"/>
-    <property name="password" value="east"/>
+    <property name="username" value="xxxx"/>
+    <property name="password" value="xxxx"/>
   </bean> -->
   <!--
   <bean class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close" id="dataSource">
     <property name="driverClassName" value="oracle.jdbc.OracleDriver"/>
     <property name="url" value="jdbc:oracle:thin:@172.17.128.4:1521:xe"/>
-    <property name="username" value="east"/>
-    <property name="password" value="east"/>
+    <property name="username" value="xxxx"/>
+    <property name="password" value="xxxx"/>
     <property name="initialSize" value="20"/>
   </bean>
 -->
