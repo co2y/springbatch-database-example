@@ -28,6 +28,6 @@
 		/> </jdbc:initialize-database> -->
 
  <!-- <bean id="mongoClient" class="com.mongodb.MongoClient">
-	<constructor-arg name="host" value="192.168.0.218:27017"/>
+	<constructor-arg name="host" value="192.168.0.218:37017"/>
   </bean> -->
 </beans>
